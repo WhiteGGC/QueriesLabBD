@@ -62,25 +62,36 @@ AS
 		IF(@grupoValido = 1) BEGIN
 			
 			/*Loop dos times*/
-			DECLARE @loopTime INT SET @loopTime = 1
-			WHILE (@loopTime < 5) BEGIN
+			DECLARE @loopTimes INT SET @loopTimes = 1
+			WHILE (@loopTimes < 5) BEGIN
 
-				DECLARE @timeValido BIT, @time INT
+				DECLARE @timeValido BIT, @time INT, @loopTime BIT
 				SET @time = CAST((RAND() * 16 + 1) AS INT)
+				SET @loopTime = 0
+				
+				WHILE(@loopTime = 0)BEGIN
+					/*Validação dos times aleatórios*/
+					EXEC sp_valida_times @time, @nomeGrupo, @timeValido OUTPUT
 
-				/*Validação dos times aleatórios*/
-				EXEC sp_valida_times @time, @nomeGrupo, @timeValido OUTPUT
-				IF(@timeValido = 1)BEGIN
-					DECLARE @query VARCHAR(100)
-					SET @query = 'INSERT INTO grupos VALUES ('''+@nomeGrupo+''', '+CAST(@time AS VARCHAR(2))+')'
-					EXEC(@query)
-					SET @loopTime = @loopTime + 1
+					IF(@timeValido = 1)BEGIN
+						DECLARE @query VARCHAR(100)
+						SET @query = 'INSERT INTO grupos VALUES ('''+@nomeGrupo+''', '+CAST(@time AS VARCHAR(2))+')'
+						EXEC(@query)
+						SET @loopTime = 1
+					END
+					ELSE IF(@time = 16)BEGIN
+						SET @time = 1
+					END
+					ELSE BEGIN
+						SET @time = @time + 1
+					END
 				END
+				SET @loopTimes = @loopTimes + 1
 			END
 			SET @loopGrupo = @loopGrupo + 1
 		END
 	END
-	SELECT * FROM grupos
+	SELECT * FROM grupos ORDER BY Grupo
 
 CREATE PROCEDURE sp_valida_grupo(@cod INT, @valido BIT OUTPUT, @grupo VARCHAR(1) OUTPUT)
 AS
@@ -148,8 +159,7 @@ AS
 		SET @valido = 0
 	END
 
-
-
+EXEC sp_gerador_grupos
 
 SELECT * FROM times
 SELECT * FROM grupos
@@ -161,3 +171,20 @@ DELETE FROM grupos
 DROP TABLE grupos
 DELETE FROM jogos
 DROP TABLE jogos
+
+CREATE PROCEDURE sp_gera_jogos
+AS
+	DECLARE @data DATE, @loopData INT
+	SET @data = '2021-02-27' SET @loopData = 1
+	WHILE(@loopData < 13)BEGIN
+		DECLARE @timeA INT, @timeB INT
+		SET @timeA = CAST((RAND() * 16 + 1) AS INT)
+		SET @timeB = CAST((RAND() * 16 + 1) AS INT)
+
+	END
+
+DECLARE @timeA INT, @timeB INT, @
+		SET @timeA = CAST((RAND() * 16 + 1) AS INT)
+		SELECT @timeB = CodigoTime FROM grupos
+		PRINT @timeA
+		PRINT @timeB
