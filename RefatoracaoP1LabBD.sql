@@ -21,8 +21,8 @@ CREATE TABLE grupos(
 )
 
 CREATE TABLE grupos_times(
-	codigoTime		INT			NOT NULL,
-	codigoGrupo		INT			NOT NULL
+	codigoTime		INT,
+	codigoGrupo		INT				
 	PRIMARY KEY(codigoTime, codigoGrupo)
 	FOREIGN KEY(codigoGrupo) REFERENCES grupos(codigoGrupo),
 	FOREIGN KEY(codigoTime) REFERENCES times(codigoTime)
@@ -60,9 +60,95 @@ INSERT INTO grupos VALUES ('A'), ('B'), ('C'), ('D')
 
 CREATE PROCEDURE sp_gerador_grupos 
 AS
-	DECLARE @loopTimes INT
-	SET @loopTimes = 1
-	WHILE(@loopTimes < 17)BEGIN
-		DECLARE @grupo INT
-		SET @grupo = CAST((RAND() * 4 + 1) AS INT)
+	DECLARE @loop INT
+	SET @loop = 1
+
+	WHILE(@loop < 5)BEGIN
+		DECLARE @time INT
+		SELECT TOP 1 @time = t.codigoTime FROM times AS t 
+		LEFT JOIN grupos_times AS gt ON gt.codigoTime = t.codigoTime
+		WHERE fl_unico_time = 1 AND gt.codigoTime IS NULL ORDER BY NEWID()
+		INSERT INTO grupos_times VALUES(@time, @loop)
+		SET @loop = @loop + 1
 	END
+
+	SET @loop = 1
+	WHILE (@loop < 13)BEGIN
+		DECLARE @grupo INT
+
+		SELECT TOP 1 @time = t.codigoTime FROM times AS t 
+		LEFT JOIN grupos_times AS gt ON gt.codigoTime = t.codigoTime
+		WHERE fl_unico_time = 0 AND gt.codigoTime IS NULL ORDER BY NEWID()
+
+		SELECT TOP 1 @grupo = g.codigoGrupo FROM grupos AS g
+		INNER JOIN grupos_times AS gt ON gt.codigoGrupo = g.codigoGrupo
+		GROUP BY g.codigoGrupo
+		HAVING COUNT(g.codigoGrupo) < 4
+		ORDER BY NEWID()
+
+		INSERT INTO grupos_times VALUES(@time, @grupo) 
+
+		SET @loop = @loop + 1
+	END
+
+	SELECT g.nome AS Grupo, t.nomeTime AS Time FROM grupos_times AS gt
+	INNER JOIN grupos AS g ON g.codigoGrupo = gt.codigoGrupo
+	INNER JOIN times AS t ON t.codigoTime = gt.codigoTime
+	ORDER BY g.nome
+
+EXEC sp_gerador_grupos
+SELECT g.nome AS Grupo, t.nomeTime AS Time FROM grupos_times AS gt
+	INNER JOIN grupos AS g ON g.codigoGrupo = gt.codigoGrupo
+	INNER JOIN times AS t ON t.codigoTime = gt.codigoTime
+	ORDER BY g.nome
+DELETE FROM grupos_times
+
+
+DECLARE @loopRodada INT, @data DATE
+SET @loopRodada = 1 SET @data = '2022-02-27'
+
+WHILE (@loopRodada < 13)BEGIN
+	DECLARE @loopJogos INT SET @loopJogos = 1
+	WHILE (@loopJogos < 9)BEGIN
+		DECLARE @timeA INT, @timeB INT, @golsA INT, @golsB INT
+
+		SELECT TOP 1 @timeA = codigoTime FROM grupos_times AS gt
+		LEFT JOIN jogos as j ON gt.codigoTime = j.CodigoTimeA OR gt.codigoTime = j.CodigoTimeB
+		WHERE (j.CodigoTimeA IS NULL AND (j.Data = @data OR j.Data IS NULL))
+		OR (j.CodigoTimeB IS NULL AND (j.Data = @data OR j.Data IS NULL))
+		ORDER BY NEWID()
+
+		SELECT TOP 1 @timeB = codigoTime FROM grupos_times AS gt
+		LEFT JOIN jogos as j ON gt.codigoTime = j.CodigoTimeA OR gt.codigoTime = j.CodigoTimeB
+		WHERE ((j.CodigoTimeA IS NULL AND (j.Data = @data OR j.Data IS NULL))
+		OR (j.CodigoTimeB IS NULL AND (j.Data = @data OR j.Data IS NULL)))
+		AND gt.codigoTime != @timeA
+		AND gt.codigoGrupo != (SELECT codigoGrupo FROM grupos_times WHERE codigoTime = @timeA)
+		AND ((j.CodigoTimeA != @timeA OR j.CodigoTimeB != @timeA))
+		ORDER BY NEWID()
+
+		INSERT INTO jogos VALUES(@timeA, @timeB, 1, 2, @data)
+		SET @loopJogos = @loopJogos + 1 
+	END
+	SET @data = DATEADD(DD,3,@data)
+	SET @loopRodada = @loopRodada + 1
+END
+
+SELECT * FROM jogos
+SELECT g.nome AS Grupo, t.nomeTime AS Time FROM grupos_times AS gt
+	INNER JOIN grupos AS g ON g.codigoGrupo = gt.codigoGrupo
+	INNER JOIN times AS t ON t.codigoTime = gt.codigoTime
+
+/*SET @data = DATEADD(DD,3,@data)*/
+
+SELECT codigoTime FROM grupos_times AS gt
+LEFT JOIN jogos as j ON gt.codigoTime = j.CodigoTimeA OR gt.codigoTime = j.CodigoTimeB
+WHERE (j.CodigoTimeA IS NULL AND (j.Data = '2022-02-27' OR j.Data IS NULL))
+OR (j.CodigoTimeB IS NULL AND (j.Data = '2022-02-27' OR j.Data IS NULL))
+ORDER BY NEWID()
+
+INSERT INTO jogos VALUES(10, 12, 1, 2, '2022-02-27')
+INSERT INTO jogos VALUES(9, 8, 1, 2, '2022-02-27')
+DELETE FROM jogos
+
+SELECT codigoTimeA FROM jogos WHERE CodigoTimeB = 2
