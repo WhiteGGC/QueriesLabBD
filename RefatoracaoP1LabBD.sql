@@ -7,7 +7,8 @@ CREATE TABLE times(
 	nomeTime		VARCHAR(100)	NOT NULL,
 	cidade			VARCHAR(100)	NOT NULL,
 	estadio			VARCHAR(100)	NOT NULL,
-	fl_unico_time	BIT				NOT NULL
+	fl_unico_time	BIT				NOT NULL,
+	participacoes	INT				NOT NULL
 	PRIMARY KEY(codigoTime)
 )
 
@@ -39,25 +40,81 @@ CREATE TABLE jogos(
 	FOREIGN KEY(CodigoTimeB) REFERENCES times(CodigoTime)
 )
 
-INSERT INTO times VALUES('Corinthians', 'São Paulo', 'Neo Química Arena', 1),
-						('Palmeiras', 'São Paulo', 'Allianz Parque', 1),
-						('São Paulo', 'São Paulo', 'Morumbi', 1),
-						('Santos', 'Santos', 'Vila Belmiro', 1),
-						('Botafogo-SP', 'Ribeirão Preto', 'Santa Cruz', 0),
-						('Ferroviária', 'Araraquara', 'Fonte Luminosa', 0),
-						('Guarani', 'Campinas', 'Brinco de Ouro', 0),
-						('Inter de Limeira', 'Limeira', 'Limeirão', 0),
-						('Ituano', 'Itu', 'Novelli Júnior', 0),
-						('Mirassol', 'Mirassol', 'José Maria de Campos Maia', 0),
-						('Novorizontino', 'Novo Horizonte', 'Jorge Ismael de Biasi', 0),
-						('Ponte Preta', 'Campinas', 'Moisés Lucarelli', 0),
-						('Red Bull Bragantino', 'Bragança Paulista', 'Nabi Abi Chedid', 0),
-						('Santo André', 'Santo André', 'Bruno José Daniel', 0),
-						('São Bento', 'Sorocaba', 'Walter Ribeiro', 0),
-						('São Caetano', 'São Caetano do Sul', 'Anacletto Campanella', 0)
+CREATE TABLE grupo_rodada(
+	CodigoGrupo		INT				NOT NULL,
+	participacoes	INT				NOT NULL
+	PRIMARY KEY(CodigoGrupo)
+)
 
-INSERT INTO grupos VALUES ('A'), ('B'), ('C'), ('D')
+CREATE TABLE matchups(
+	CodigoTimeA		INT				NOT NULL,
+	CodigoTimeB		INT				NOT NULL
+	PRIMARY KEY(CodigoTimeA, CodigoTimeB),
+	FOREIGN KEY(CodigoTimeA) REFERENCES times(CodigoTime),
+	FOREIGN KEY(CodigoTimeB) REFERENCES times(CodigoTime)
+)
 
+INSERT INTO times VALUES('Corinthians', 'São Paulo', 'Neo Química Arena', 1, 0),
+						('Palmeiras', 'São Paulo', 'Allianz Parque', 1, 0),
+						('São Paulo', 'São Paulo', 'Morumbi', 1, 0),
+						('Santos', 'Santos', 'Vila Belmiro', 1, 0),
+						('Botafogo-SP', 'Ribeirão Preto', 'Santa Cruz', 0, 0),
+						('Ferroviária', 'Araraquara', 'Fonte Luminosa', 0, 0),
+						('Guarani', 'Campinas', 'Brinco de Ouro', 0, 0),
+						('Inter de Limeira', 'Limeira', 'Limeirão', 0, 0),
+						('Ituano', 'Itu', 'Novelli Júnior', 0, 0),
+						('Mirassol', 'Mirassol', 'José Maria de Campos Maia', 0, 0),
+						('Novorizontino', 'Novo Horizonte', 'Jorge Ismael de Biasi', 0, 0),
+						('Ponte Preta', 'Campinas', 'Moisés Lucarelli', 0, 0),
+						('Red Bull Bragantino', 'Bragança Paulista', 'Nabi Abi Chedid', 0, 0),
+						('Santo André', 'Santo André', 'Bruno José Daniel', 0, 0),
+						('São Bento', 'Sorocaba', 'Walter Ribeiro', 0, 0),
+						('São Caetano', 'São Caetano do Sul', 'Anacletto Campanella', 0, 0)
+
+INSERT INTO grupo_rodada VALUES (1, 0), (2, 0), (3, 0), (4, 0)
+
+DECLARE @loopA INT, @loopB INT
+SET @loopA = 1 
+
+WHILE(@loopA < 17)BEGIN
+	DECLARE @aux INT
+	SELECT @aux = COUNT(codigoTime) FROM grupos_times 
+		WHERE codigoTime NOT IN (SELECT codigoTimeA FROM matchups WHERE CodigoTimeB = @loopA)
+		AND codigoGrupo NOT IN (SELECT codigoGrupo FROM grupos_times WHERE codigoTime = @loopA)
+		AND codigoTime NOT IN (SELECT codigoTimeB FROM matchups WHERE CodigoTimeA = @loopA)
+	SET @loopB = 0
+	WHILE(@loopB < @aux)BEGIN
+		DECLARE @codigoB INT
+		SELECT TOP 1 @codigoB = codigoTime FROM grupos_times 
+		WHERE codigoTime NOT IN (SELECT codigoTimeA FROM matchups WHERE CodigoTimeB = @loopA)
+		AND codigoGrupo NOT IN (SELECT codigoGrupo FROM grupos_times WHERE codigoTime = @loopA)
+		AND codigoTime NOT IN (SELECT codigoTimeB FROM matchups WHERE CodigoTimeA = @loopA)
+
+		INSERT INTO matchups VALUES (@loopA, @codigoB)
+
+		SET @loopB = @loopB + 1
+	END
+	SET @loopA = @loopA + 1
+END
+
+SELECT * FROM matchups
+DELETE FROM matchups
+SELECT * FROM grupos_times
+
+
+SELECT  COUNT(codigoTime) FROM grupos_times 
+		WHERE codigoTime NOT IN (SELECT codigoTimeA FROM matchups WHERE CodigoTimeB = 1)
+		AND codigoGrupo NOT IN (SELECT codigoGrupo FROM grupos_times WHERE codigoTime = 1)
+		AND codigoTime NOT IN (SELECT codigoTimeB FROM matchups WHERE CodigoTimeA = 1)
+
+
+
+
+
+
+
+
+/*
 CREATE PROCEDURE sp_gerador_grupos 
 AS
 	DECLARE @loop INT
@@ -104,51 +161,82 @@ SELECT g.nome AS Grupo, t.nomeTime AS Time FROM grupos_times AS gt
 DELETE FROM grupos_times
 
 
-DECLARE @loopRodada INT, @data DATE
-SET @loopRodada = 1 SET @data = '2022-02-27'
+DECLARE @loopRodada INT, @data DATE, @dataPassada DATE,  @loopJogos INT
+SET @loopRodada = 1 SET @data = '2022-02-27' 
 
 WHILE (@loopRodada < 13)BEGIN
-	DECLARE @loopJogos INT SET @loopJogos = 1
+	SET @loopJogos = 1
 	WHILE (@loopJogos < 9)BEGIN
 		DECLARE @timeA INT, @timeB INT, @golsA INT, @golsB INT
+		/*IF(@loopRodada >= 1)BEGIN
 
 		SELECT TOP 1 @timeA = codigoTime FROM grupos_times AS gt
 		LEFT JOIN jogos as j ON gt.codigoTime = j.CodigoTimeA OR gt.codigoTime = j.CodigoTimeB
-		WHERE (j.CodigoTimeA IS NULL AND (j.Data = @data OR j.Data IS NULL))
-		OR (j.CodigoTimeB IS NULL AND (j.Data = @data OR j.Data IS NULL))
+		WHERE (j.Data != @data OR j.Data IS NULL)
 		ORDER BY NEWID()
 
 		SELECT TOP 1 @timeB = codigoTime FROM grupos_times AS gt
 		LEFT JOIN jogos as j ON gt.codigoTime = j.CodigoTimeA OR gt.codigoTime = j.CodigoTimeB
-		WHERE ((j.CodigoTimeA IS NULL AND (j.Data = @data OR j.Data IS NULL))
-		OR (j.CodigoTimeB IS NULL AND (j.Data = @data OR j.Data IS NULL)))
-		AND gt.codigoTime != @timeA
+		WHERE (j.Data != @data OR j.Data IS NULL)
 		AND gt.codigoGrupo != (SELECT codigoGrupo FROM grupos_times WHERE codigoTime = @timeA)
-		AND ((j.CodigoTimeA != @timeA OR j.CodigoTimeB != @timeA))
+		ORDER BY NEWID()
+		
+		END
+		ELSE BEGIN
+		*/
+		SET @timeA = NULL SET @timeB = NULL
+
+		SELECT TOP 1 @timeA = codigoTime FROM grupos_times
+		WHERE codigoTime NOT IN (SELECT DISTINCT gt.codigoTime FROM grupos_times AS gt LEFT JOIN jogos AS jA ON jA.CodigoTimeA = gt.codigoTime OR jA.CodigoTimeB = gt.codigoTime
+		WHERE jA.Data = @data )
+		AND codigoGrupo NOT IN (SELECT TOP 2 codigoGrupo FROM grupos_times AS gt LEFT JOIN jogos AS j ON j.CodigoTimeA = gt.codigoTime OR j.CodigoTimeB = gt.codigoTime
+			WHERE j.Data = @data
+			GROUP BY (codigoGrupo)
+			ORDER BY COUNT(codigoGrupo) DESC)
 		ORDER BY NEWID()
 
+		SELECT TOP 1 @timeB = codigoTime FROM grupos_times
+		WHERE codigoGrupo NOT IN (SELECT codigoGrupo FROM grupos_times WHERE codigoTime = @timeA)
+		AND codigoTime NOT IN (SELECT DISTINCT gt.codigoTime FROM grupos_times AS gt LEFT JOIN jogos AS jA ON jA.CodigoTimeA = gt.codigoTime OR jA.CodigoTimeB = gt.codigoTime
+		WHERE jA.Data = @data)
+		ORDER BY NEWID()
+		/*END*/
+
 		INSERT INTO jogos VALUES(@timeA, @timeB, 1, 2, @data)
+		
 		SET @loopJogos = @loopJogos + 1 
+
 	END
 	SET @data = DATEADD(DD,3,@data)
 	SET @loopRodada = @loopRodada + 1
+
+
+	PRINT 'loopRodada: ' + CAST(@loopRodada AS VARCHAR(2))
 END
 
+
 SELECT * FROM jogos
-SELECT g.nome AS Grupo, t.nomeTime AS Time FROM grupos_times AS gt
-	INNER JOIN grupos AS g ON g.codigoGrupo = gt.codigoGrupo
-	INNER JOIN times AS t ON t.codigoTime = gt.codigoTime
-
-/*SET @data = DATEADD(DD,3,@data)*/
-
-SELECT codigoTime FROM grupos_times AS gt
-LEFT JOIN jogos as j ON gt.codigoTime = j.CodigoTimeA OR gt.codigoTime = j.CodigoTimeB
-WHERE (j.CodigoTimeA IS NULL AND (j.Data = '2022-02-27' OR j.Data IS NULL))
-OR (j.CodigoTimeB IS NULL AND (j.Data = '2022-02-27' OR j.Data IS NULL))
-ORDER BY NEWID()
-
-INSERT INTO jogos VALUES(10, 12, 1, 2, '2022-02-27')
-INSERT INTO jogos VALUES(9, 8, 1, 2, '2022-02-27')
+ORDER BY Data
+SELECT * FROM grupos_times
 DELETE FROM jogos
 
-SELECT codigoTimeA FROM jogos WHERE CodigoTimeB = 2
+SELECT * FROM grupos WHERE codigoGrupo IN (SELECT codigoGrupo FROM grupos_times WHERE codigoTime = 1 OR codigoTime = 2)
+
+SELECT TOP 2 codigoGrupo, participacoes FROM grupo_rodada ORDER BY (participacoes)
+UPDATE grupo_rodada SET participacoes = participacoes + 1 WHERE CodigoGrupo = 3
+
+'2022-02-27'
+'2022-03-02'
+'2022-03-05'
+'2022-03-08'
+'2022-03-11'
+
+SELECT DISTINCT gt.codigoTime FROM grupos_times AS gt LEFT JOIN jogos AS jA ON jA.CodigoTimeA = gt.codigoTime OR jA.CodigoTimeB = gt.codigoTime
+WHERE jA.Data = '2022-02-27'
+
+SELECT TOP 2 codigoGrupo FROM grupos_times AS gt LEFT JOIN jogos AS j ON j.CodigoTimeA = gt.codigoTime OR j.CodigoTimeB = gt.codigoTime
+WHERE j.Data = '2022-03-11'
+GROUP BY (codigoGrupo)
+ORDER BY COUNT(codigoGrupo) DESC
+
+*/
