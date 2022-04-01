@@ -188,3 +188,85 @@ DECLARE @timeA INT, @timeB INT, @
 		SELECT @timeB = CodigoTime FROM grupos
 		PRINT @timeA
 		PRINT @timeB
+
+/*
+
+DECLARE @loopRodada INT, @data DATE, @dataPassada DATE,  @loopJogos INT
+SET @loopRodada = 1 SET @data = '2022-02-27' 
+
+WHILE (@loopRodada < 13)BEGIN
+	SET @loopJogos = 1
+	WHILE (@loopJogos < 9)BEGIN
+		DECLARE @timeA INT, @timeB INT, @golsA INT, @golsB INT
+		/*IF(@loopRodada >= 1)BEGIN
+
+		SELECT TOP 1 @timeA = codigoTime FROM grupos_times AS gt
+		LEFT JOIN jogos as j ON gt.codigoTime = j.CodigoTimeA OR gt.codigoTime = j.CodigoTimeB
+		WHERE (j.Data != @data OR j.Data IS NULL)
+		ORDER BY NEWID()
+
+		SELECT TOP 1 @timeB = codigoTime FROM grupos_times AS gt
+		LEFT JOIN jogos as j ON gt.codigoTime = j.CodigoTimeA OR gt.codigoTime = j.CodigoTimeB
+		WHERE (j.Data != @data OR j.Data IS NULL)
+		AND gt.codigoGrupo != (SELECT codigoGrupo FROM grupos_times WHERE codigoTime = @timeA)
+		ORDER BY NEWID()
+		
+		END
+		ELSE BEGIN
+		*/
+		SET @timeA = NULL SET @timeB = NULL
+
+		SELECT TOP 1 @timeA = codigoTime FROM grupos_times
+		WHERE codigoTime NOT IN (SELECT DISTINCT gt.codigoTime FROM grupos_times AS gt LEFT JOIN jogos AS jA ON jA.CodigoTimeA = gt.codigoTime OR jA.CodigoTimeB = gt.codigoTime
+		WHERE jA.Data = @data )
+		AND codigoGrupo NOT IN (SELECT TOP 2 codigoGrupo FROM grupos_times AS gt LEFT JOIN jogos AS j ON j.CodigoTimeA = gt.codigoTime OR j.CodigoTimeB = gt.codigoTime
+			WHERE j.Data = @data
+			GROUP BY (codigoGrupo)
+			ORDER BY COUNT(codigoGrupo) DESC)
+		ORDER BY NEWID()
+
+		SELECT TOP 1 @timeB = codigoTime FROM grupos_times
+		WHERE codigoGrupo NOT IN (SELECT codigoGrupo FROM grupos_times WHERE codigoTime = @timeA)
+		AND codigoTime NOT IN (SELECT DISTINCT gt.codigoTime FROM grupos_times AS gt LEFT JOIN jogos AS jA ON jA.CodigoTimeA = gt.codigoTime OR jA.CodigoTimeB = gt.codigoTime
+		WHERE jA.Data = @data)
+		ORDER BY NEWID()
+		/*END*/
+
+		INSERT INTO jogos VALUES(@timeA, @timeB, 1, 2, @data)
+		
+		SET @loopJogos = @loopJogos + 1 
+
+	END
+	SET @data = DATEADD(DD,3,@data)
+	SET @loopRodada = @loopRodada + 1
+
+
+	PRINT 'loopRodada: ' + CAST(@loopRodada AS VARCHAR(2))
+END
+
+
+SELECT * FROM jogos
+ORDER BY Data
+SELECT * FROM grupos_times
+DELETE FROM jogos
+
+SELECT * FROM grupos WHERE codigoGrupo IN (SELECT codigoGrupo FROM grupos_times WHERE codigoTime = 1 OR codigoTime = 2)
+
+SELECT TOP 2 codigoGrupo, participacoes FROM grupo_rodada ORDER BY (participacoes)
+UPDATE grupo_rodada SET participacoes = participacoes + 1 WHERE CodigoGrupo = 3
+
+'2022-02-27'
+'2022-03-02'
+'2022-03-05'
+'2022-03-08'
+'2022-03-11'
+
+SELECT DISTINCT gt.codigoTime FROM grupos_times AS gt LEFT JOIN jogos AS jA ON jA.CodigoTimeA = gt.codigoTime OR jA.CodigoTimeB = gt.codigoTime
+WHERE jA.Data = '2022-02-27'
+
+SELECT TOP 2 codigoGrupo FROM grupos_times AS gt LEFT JOIN jogos AS j ON j.CodigoTimeA = gt.codigoTime OR j.CodigoTimeB = gt.codigoTime
+WHERE j.Data = '2022-03-11'
+GROUP BY (codigoGrupo)
+ORDER BY COUNT(codigoGrupo) DESC
+
+*/
